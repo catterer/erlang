@@ -1,25 +1,34 @@
 -module(indx).
--export([readfile/1, split/2]).
+-export([readfile/1, split/2, splitfile/1]).
 
 lines(Dev, Acc) ->
-    case io:get_line(Dev, "") of
+    case io:get_line(Dev, []) of
         eof -> Acc;
-        Line -> lines(Dev, lists:append(Acc, [Line]))
+        Line -> lines(Dev, lists:append(Acc, [string:strip(Line, right, $\n)]))
     end.
     
 readfile(FName) ->
-    Dev = file:open(FName, read),
+    {ok, Dev} = file:open(FName, read),
     lines(Dev, []).
 
-split(Line, Sep) when is_integer(Sep) ->
-    split(Line, Sep, [], []).
+split(Line, SepFunc) when is_function(SepFunc) ->
+    split(Line, SepFunc, [], []).
 
 split([], _, Acc, []) -> Acc;
 split([], _, Acc, LastWord) -> lists:append(Acc, [LastWord]);
-split([A|T], Sep, Acc, LastWord) ->
-    case {A, LastWord} of
-    {Sep, []}   -> split(T, Sep, Acc, []);
-    {Sep, _}    -> split(T, Sep, lists:append(Acc, [LastWord]), []);
-    _           -> split(T, Sep, Acc, lists:append(LastWord, [A]))
+split([A|T], SepFunc, Acc, LastWord) ->
+    case {SepFunc(A), LastWord} of
+    {true, []}   -> split(T, SepFunc, Acc, []);
+    {true, _}    -> split(T, SepFunc, lists:append(Acc, [LastWord]), []);
+    {false, _}   -> split(T, SepFunc, Acc, lists:append(LastWord, [A]))
     end.
 
+splitlines(Lines, IsSep) -> splitlines(Lines, [], IsSep).
+splitlines([], Acc, _) -> Acc;
+splitlines([A|T], Acc, IsSep) ->
+    SplitLine = split(A, IsSep),
+    splitlines(T, lists:append(Acc, [SplitLine]), IsSep).
+
+splitfile(FName) ->
+    splitlines(readfile(FName), fun ($ )-> true; (_)->false end).
+    
