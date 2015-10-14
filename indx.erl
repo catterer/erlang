@@ -12,14 +12,14 @@ readfile(FName) ->
     lines(Dev, []).
 
 split(Line, Sep) when is_integer(Sep) ->
-    split(Line, Sep, []).
+    split(Line, Sep, [], []).
 
-split([], _, Acc) -> Acc;
-split([A|T], Sep, Acc) ->
-    case A of
-        Sep -> split(T, Sep, lists:append(Acc, [[]]));
-        _   -> split(T, Sep, modlast(Acc, A))
+split([], _, Acc, []) -> Acc;
+split([], _, Acc, LastWord) -> lists:append(Acc, [LastWord]);
+split([A|T], Sep, Acc, LastWord) ->
+    case {A, LastWord} of
+    {Sep, []}   -> split(T, Sep, Acc, []);
+    {Sep, _}    -> split(T, Sep, lists:append(Acc, [LastWord]), []);
+    _           -> split(T, Sep, Acc, lists:append(LastWord, [A]))
     end.
-    
-modlast([], A) -> [[A]];
-modlast([Last|T], A) -> [lists:append(Last, [A])|T].
+
