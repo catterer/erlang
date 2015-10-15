@@ -1,5 +1,5 @@
 -module(indx).
--export([readfile/1, split/2, splitfile/1]).
+-export([readfile/1, split/2, splitfile/1, build/1]).
 
 lines(Dev, Acc) ->
     case io:get_line(Dev, []) of
@@ -30,5 +30,29 @@ splitlines([A|T], Acc, IsSep) ->
     splitlines(T, lists:append(Acc, [SplitLine]), IsSep).
 
 splitfile(FName) ->
-    splitlines(readfile(FName), fun ($ )-> true; (_)->false end).
+    splitlines(readfile(FName),
+            fun
+                ($ )-> true;
+                ($()-> true;
+                ($))-> true;
+                (${)-> true;
+                ($})-> true;
+                ($.)-> true;
+                ($,)-> true;
+                (_)->false
+            end).
     
+build(FName) -> build(splitfile(FName), 1, dict:new()).
+build([], _, Dict) -> Dict;
+build([[]|Strs], NLine, Dict) -> build(Strs, NLine+1, Dict);
+build([[Word|Str]|Strs], NLine, Dict) ->
+    case dict:find(Word, Dict) of
+        {ok, List} -> 
+            case lists:last(List) of
+                NLine -> build([Str|Strs], NLine, Dict);
+                _     -> build([Str|Strs], NLine, dict:append(Word, NLine, Dict))
+            end;
+        error ->
+            build([Str|Strs], NLine, dict:append(Word, NLine, Dict))
+    end.
+            
